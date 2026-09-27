@@ -1,7 +1,5 @@
 // Privacy Policy. Required for Google AdSense and general compliance.
-// IMPORTANT: replace CONTACT_EMAIL with a real address you monitor before
-// submitting the site to AdSense.
-const CONTACT_EMAIL = 'REPLACE_ME@example.com';
+const CONTACT_EMAIL = 'bingo.arena.support@gmail.com';
 const LAST_UPDATED = 'September 2026';
 
 export default function Privacy() {

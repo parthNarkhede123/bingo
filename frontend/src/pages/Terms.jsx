@@ -1,5 +1,5 @@
 // Terms of Service.
-const CONTACT_EMAIL = 'REPLACE_ME@example.com';
+const CONTACT_EMAIL = 'bingo.arena.support@gmail.com';
 const LAST_UPDATED = 'September 2026';
 
 export default function Terms() {
