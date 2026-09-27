@@ -37,6 +37,25 @@ services:
         sync: false                  # paste your Atlas connection string once
       - key: CLIENT_ORIGIN
         value: https://bingo-arena.onrender.com
+      # ---- Email (password reset) ----
+      # Leave the SMTP_* keys blank to deploy WITHOUT email: reset requests
+      # still succeed uniformly but nothing is delivered. Fill them in the
+      # dashboard to enable real reset emails (any SMTP provider works — a
+      # Gmail App Password, Brevo, Mailgun, SendGrid, ...).
+      - key: APP_URL
+        value: https://bingo-arena.onrender.com   # frontend base for reset links
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "0"                 # set to "1" only for SMTP port 465
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false                # e.g. "Bingo Arena <bingo.arena.support@gmail.com>"
 
   # ---------- Frontend: React + Vite static site ----------
   - type: web

@@ -40,6 +40,30 @@ const config = {
 
   bcryptRounds: intEnv('BCRYPT_ROUNDS', 12),
 
+  // Base URL of the FRONTEND, used to build links inside emails (password
+  // reset). Falls back to the first configured CORS origin, which in prod is
+  // already the deployed site.
+  appUrl:
+    process.env.APP_URL ||
+    (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',')[0].trim(),
+
+  // Transactional email (password reset). When smtpHost is empty the app runs
+  // WITHOUT sending mail: reset requests still succeed uniformly (no account
+  // enumeration) but nothing is delivered. Configure these in prod to enable.
+  email: {
+    smtpHost: process.env.SMTP_HOST || '',
+    smtpPort: intEnv('SMTP_PORT', 587),
+    smtpSecure: (process.env.SMTP_SECURE || '0') === '1', // true only for port 465
+    smtpUser: process.env.SMTP_USER || '',
+    smtpPass: process.env.SMTP_PASS || '',
+    from: process.env.MAIL_FROM || 'Bingo Arena <no-reply@bingo-arena.local>',
+  },
+
+  passwordReset: {
+    // How long a reset link is valid, in ms (default 1 hour). Single-use.
+    ttlMs: intEnv('RESET_TTL_MS', 60 * 60 * 1000),
+  },
+
   game: {
     setupSeconds: intEnv('SETUP_SECONDS', 30),
     turnSeconds: intEnv('TURN_SECONDS', 20),

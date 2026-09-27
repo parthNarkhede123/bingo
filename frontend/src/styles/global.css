@@ -245,3 +245,7 @@ input:focus { outline: 2px solid var(--primary); border-color: var(--primary); }
   .cta-row { flex-direction: column; align-items: stretch; }
   .setup-buttons .btn { flex: 1 1 auto; }
 }
+
+/* Auth: forgot-password link sits just under the sign-in button. */
+.auth-card .forgot-link { margin: 4px 0 0; }
+.auth-card .forgot-link a { color: var(--primary); }

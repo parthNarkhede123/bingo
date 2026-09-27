@@ -38,6 +38,10 @@ export const api = {
   login: (identifier, password) =>
     request('/api/auth/login', { method: 'POST', body: { identifier, password } }),
   me: () => request('/api/auth/me', { auth: true }),
+  forgotPassword: (identifier) =>
+    request('/api/auth/forgot-password', { method: 'POST', body: { identifier } }),
+  resetPassword: (token, password) =>
+    request('/api/auth/reset-password', { method: 'POST', body: { token, password } }),
   leaderboard: (limit = 50) => request(`/api/leaderboard?limit=${limit}`),
   player: (username) => request(`/api/leaderboard/player/${encodeURIComponent(username)}`),
 };

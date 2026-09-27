@@ -34,6 +34,12 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: { type: String, required: true, select: false },
 
+    // Password reset: we store only a SHA-256 hash of the reset token (never
+    // the raw token, same principle as passwords), plus its expiry. select:false
+    // so these never leak through normal queries. Cleared on use.
+    resetTokenHash: { type: String, select: false },
+    resetTokenExpires: { type: Date, select: false },
+
     rating: { type: Number, default: BASE_RATING, index: true },
     peakRating: { type: Number, default: BASE_RATING },
     wins: { type: Number, default: 0 },
@@ -45,6 +51,9 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Sparse index: only the handful of users mid-reset carry this field.
+userSchema.index({ resetTokenHash: 1 }, { sparse: true });
 
 // Public projection used everywhere we send a user to the client.
 userSchema.methods.toPublicJSON = function toPublicJSON() {

@@ -8,6 +8,8 @@ const { signToken, requireAuth } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimit');
 const crypto = require('crypto');
 const { config } = require('../config');
+const { sendPasswordResetEmail } = require('../utils/mailer');
+const { logger } = require('../utils/logger');
 
 const router = express.Router();
 
@@ -123,5 +125,85 @@ router.get('/me', requireAuth, async (req, res, next) => {
     return next(err);
   }
 });
+
+// POST /api/auth/forgot-password
+// Body: { identifier }  (username OR email). Always returns the SAME response
+// whether or not the account exists, so this endpoint can't be used to
+// enumerate accounts. If a match is found we store only a SHA-256 hash of a
+// fresh single-use token and email the raw token as a link.
+router.post(
+  '/forgot-password',
+  authLimiter,
+  [body('identifier').isString().trim().notEmpty().withMessage('Username or email is required.')],
+  async (req, res, next) => {
+    if (!handleValidation(req, res)) return;
+    // Uniform reply regardless of outcome (no account enumeration).
+    const GENERIC = { ok: true, message: 'If an account matches, a password reset link has been sent.' };
+    try {
+      const idLower = req.body.identifier.toLowerCase();
+      const user = await User.findOne({ $or: [{ usernameLower: idLower }, { email: idLower }] })
+        .select('+resetTokenHash +resetTokenExpires');
+      if (!user) return res.json(GENERIC);
+
+      // Random single-use token; only its hash is persisted (like a password).
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      user.resetTokenHash = tokenHash;
+      user.resetTokenExpires = new Date(Date.now() + config.passwordReset.ttlMs);
+      await user.save();
+
+      const resetUrl = `${config.appUrl}/reset-password?token=${rawToken}`;
+      // Email send is fire-and-forget in prod so response timing doesn't reveal
+      // whether the account exists; failures are logged, never surfaced. In
+      // tests we await it so the captured outbox is ready when the call returns.
+      const mailP = sendPasswordResetEmail({ to: user.email, username: user.username, resetUrl })
+        .catch((err) => logger.error('Password reset email failed:', err.message));
+      if (config.env === 'test') await mailP;
+
+      return res.json(GENERIC);
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+// POST /api/auth/reset-password
+// Body: { token, password }. Consumes a valid, unexpired token and sets a new
+// password. The token is single-use (cleared on success).
+router.post(
+  '/reset-password',
+  authLimiter,
+  [
+    body('token').isString().trim().notEmpty().withMessage('Reset token is required.'),
+    body('password')
+      .isString()
+      .isLength({ min: 8 }).withMessage('Password must be at least 8 characters.')
+      .isByteLength({ max: 72 }).withMessage('Password must be at most 72 bytes.'),
+  ],
+  async (req, res, next) => {
+    if (!handleValidation(req, res)) return;
+    try {
+      const { token, password } = req.body;
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const user = await User.findOne({ resetTokenHash: tokenHash })
+        .select('+resetTokenHash +resetTokenExpires +passwordHash');
+
+      const INVALID = { error: 'This reset link is invalid or has expired.' };
+      if (!user || !user.resetTokenExpires || user.resetTokenExpires.getTime() < Date.now()) {
+        return res.status(400).json(INVALID);
+      }
+
+      user.passwordHash = await bcrypt.hash(password, config.bcryptRounds);
+      user.set('resetTokenHash', undefined);   // burn the token: single-use
+      user.set('resetTokenExpires', undefined);
+      user.lastSeen = new Date();
+      await user.save();
+
+      return res.json({ ok: true, message: 'Your password has been reset. You can now sign in.' });
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
 
 module.exports = router;
