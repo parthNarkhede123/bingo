@@ -10,6 +10,9 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 
 process.env.JWT_SECRET = 'test-secret-test-secret-test-secret-1234';
 process.env.NODE_ENV = 'test';
+// Tests don't need production-strength hashing; the low cost keeps the brute-force
+// rate-limit test (100+ bcrypt.compare calls) well under Jest's timeout on slow CI.
+process.env.BCRYPT_ROUNDS = '4';
 process.env.SETUP_SECONDS = '60';
 process.env.RECONNECT_GRACE_SECONDS = '1';
 process.env.AUTH_RATE_MAX = '100';
