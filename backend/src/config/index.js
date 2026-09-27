@@ -52,6 +52,11 @@ const config = {
     maxQueueSize: intEnv('MAX_QUEUE_SIZE', 5000),
     // Entries waiting longer than this are evicted (client is told to retry).
     maxWaitMs: intEnv('MAX_QUEUE_WAIT_MS', 120000),
+    // When no human opponent appears within this window, match the waiting
+    // player against a bot so they never get stuck "finding an opponent".
+    botFallbackMs: intEnv('BOT_FALLBACK_MS', 7000),
+    // Master switch for bot fallback (set BOTS_ENABLED=0 to disable).
+    botsEnabled: (process.env.BOTS_ENABLED || '1') !== '0',
   },
 
   socket: {

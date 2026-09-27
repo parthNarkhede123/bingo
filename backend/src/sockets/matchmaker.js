@@ -124,6 +124,21 @@ class Matchmaker {
     for (const e of evicted) this.queue.delete(e.userId);
     return evicted;
   }
+
+  /**
+   * Remove and return entries that have waited at least thresholdMs, so the
+   * caller can match each with a bot. This is the "no human available" fallback;
+   * it runs only after the human-pairing sweep, so two real players who arrive
+   * close together still match each other rather than getting bots.
+   */
+  takeStaleForBot(nowMs, thresholdMs) {
+    const taken = [];
+    for (const entry of this.queue.values()) {
+      if (nowMs - entry.joinedAt >= thresholdMs) taken.push(entry);
+    }
+    for (const e of taken) this.queue.delete(e.userId);
+    return taken;
+  }
 }
 
 /** Acceptance band in rating points, widening with wait time (ms). */

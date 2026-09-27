@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api/client';
+import Ad from '../components/Ad';
 
 export default function Profile() {
   const { username } = useParams();
@@ -33,7 +34,10 @@ export default function Profile() {
         <div className="stat"><span>{winRate}%</span><small>Win rate</small></div>
       </div>
 
+      <Ad label="Sponsored" placement="profile" style={{ margin: '4px 0 24px' }} />
+
       <h2>Recent games</h2>
+      <div className="table-wrap">
       <table className="table">
         <thead><tr><th>Opponent</th><th>Result</th><th>Δ Rating</th></tr></thead>
         <tbody>
@@ -49,6 +53,9 @@ export default function Profile() {
           {history.length === 0 && <tr><td colSpan="3" className="muted center">No games yet.</td></tr>}
         </tbody>
       </table>
+      </div>
+
+      <Ad label="Sponsored" placement="profile" style={{ margin: '24px 0 8px' }} />
     </div>
   );
 }

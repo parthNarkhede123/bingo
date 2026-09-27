@@ -15,6 +15,17 @@ function shuffled() {
   return a;
 }
 
+// A fresh, empty setup board. 0 = no number placed yet (renders blank).
+const emptyBoard = () => Array(25).fill(0);
+
+// The next number to place: the lowest of 1..25 not already on the board, so
+// tapping fills 1, 2, 3 … in order and refills gaps left by clearing a cell.
+function nextNumberFor(board) {
+  const used = new Set(board.filter((n) => n > 0));
+  for (let n = 1; n <= 25; n += 1) if (!used.has(n)) return n;
+  return null; // board is full
+}
+
 export default function Play() {
   const { user, refresh } = useAuth();
   const navigate = useNavigate();
@@ -27,7 +38,6 @@ export default function Play() {
   const [turn, setTurn] = useState(null);
   const [myScore, setMyScore] = useState({ lines: 0, letters: 0 });
   const [oppScore, setOppScore] = useState({ lines: 0, letters: 0 });
-  const [selected, setSelected] = useState(null);
   const [deadline, setDeadline] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [result, setResult] = useState(null);
@@ -49,19 +59,21 @@ export default function Play() {
     const onWaiting = () => setPhase('searching');
     const onFound = (data) => {
       setOpponent(data.opponent);
-      setBoard(data.yourBoard);
+      setBoard(emptyBoard());
       setCalled([]);
       setMyScore({ lines: 0, letters: 0 });
       setOppScore({ lines: 0, letters: 0 });
       setResult(null);
       setLocked(false);
-      setSelected(null);
       setDeadline(data.setupDeadline);
       setPhase('setup');
       setNotice('');
     };
     const onAccepted = (data) => { setBoard(data.board); setLocked(true); setNotice('Board locked. Waiting for opponent…'); };
-    const onStart = (data) => { setPhase('playing'); setTurn(data.firstPlayer); setDeadline(data.turnDeadline); setNotice(''); };
+    const onStart = (data) => {
+      if (data.yourBoard) setBoard(data.yourBoard);
+      setPhase('playing'); setTurn(data.firstPlayer); setDeadline(data.turnDeadline); setNotice('');
+    };
     const onUpdate = (u) => {
       setCalled((prev) => (u.number != null && !prev.includes(u.number) ? [...prev, u.number] : prev));
       if (u.scores) {
@@ -136,20 +148,28 @@ export default function Play() {
 
   const handleSetupCell = useCallback((idx) => {
     if (locked) return;
-    setSelected((sel) => {
-      if (sel === null) return idx;
-      if (sel === idx) return null;
-      setBoard((b) => {
-        const nb = b.slice();
-        [nb[sel], nb[idx]] = [nb[idx], nb[sel]];
-        return nb;
-      });
-      return null;
+    setBoard((b) => {
+      const nb = b.slice();
+      if (nb[idx] > 0) { nb[idx] = 0; return nb; } // tap a placed cell to clear it
+      const next = nextNumberFor(nb);
+      if (next != null) nb[idx] = next;            // place the next number in sequence
+      return nb;
     });
   }, [locked]);
 
-  const randomize = () => { if (!locked) { setBoard(shuffled()); setSelected(null); } };
-  const lockIn = () => { socketRef.current.emit('board:submit', { board }); };
+  const randomize = () => { if (!locked) setBoard(shuffled()); };
+  const clearBoard = () => { if (!locked) setBoard(emptyBoard()); };
+  const undo = () => {
+    if (locked) return;
+    setBoard((b) => {
+      let maxIdx = -1, maxVal = 0;
+      b.forEach((n, i) => { if (n > maxVal) { maxVal = n; maxIdx = i; } });
+      if (maxIdx < 0) return b;
+      const nb = b.slice(); nb[maxIdx] = 0; return nb;
+    });
+  };
+  const placedCount = board.filter((n) => n > 0).length;
+  const lockIn = () => { if (placedCount === 25) socketRef.current.emit('board:submit', { board }); };
   const callNumber = (idx, num) => { if (myTurn) socketRef.current.emit('game:call', { number: num }); };
   const resign = () => { socketRef.current.emit('game:leave'); };
   const searchAgain = () => { setNotice(''); setPhase('searching'); socketRef.current.emit('queue:join'); };
@@ -210,17 +230,29 @@ export default function Play() {
               board={board}
               called={called}
               editable={phase === 'setup' && !locked}
-              selectedIndex={selected}
               onCellClick={phase === 'setup' ? handleSetupCell : callNumber}
               yourTurn={myTurn}
               disabled={phase === 'over'}
             />
 
             {phase === 'setup' && !locked && (
-              <div className="controls">
-                <button className="btn btn-ghost" onClick={randomize}>🎲 Randomize</button>
-                <button className="btn btn-primary" onClick={lockIn}>Lock in board</button>
-                <p className="muted">Tap two cells to swap them.</p>
+              <div className="controls setup-controls">
+                <p className="muted setup-hint">
+                  Tap the squares to place <strong>1 → 25</strong> in any order.
+                  Tap a placed square to clear it — or let us fill it for you.
+                </p>
+                <div className="setup-progress" aria-label={`${placedCount} of 25 placed`}>
+                  <div className="setup-progress__bar" style={{ width: `${(placedCount / 25) * 100}%` }} />
+                  <span>{placedCount}/25</span>
+                </div>
+                <div className="setup-buttons">
+                  <button className="btn btn-ghost btn-small" onClick={undo} disabled={placedCount === 0}>↩ Undo</button>
+                  <button className="btn btn-ghost btn-small" onClick={clearBoard} disabled={placedCount === 0}>✕ Clear</button>
+                  <button className="btn btn-ghost btn-small" onClick={randomize}>🎲 Randomize</button>
+                  <button className="btn btn-primary" onClick={lockIn} disabled={placedCount !== 25}>
+                    {placedCount === 25 ? 'Lock in board' : `Place ${25 - placedCount} more`}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -242,7 +274,7 @@ export default function Play() {
                 {called.map((n) => <span key={n} className="chip">{n}</span>)}
               </div>
             </div>
-            <Ad label="Advertisement" />
+            <Ad label="Advertisement" placement="play" />
           </aside>
         </div>
       )}

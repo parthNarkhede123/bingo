@@ -184,6 +184,14 @@ function attachSockets(httpServer) {
     const pairs = matchmaker.sweep(now);
     for (const pair of pairs) gm.createMatch(pair.a, pair.b);
 
+    // No human opponent within the fallback window -> match with a bot so a lone
+    // player is never stuck. Runs AFTER human pairing so two real players who
+    // arrive close together still match each other.
+    if (config.matchmaking.botsEnabled) {
+      const lonely = matchmaker.takeStaleForBot(now, config.matchmaking.botFallbackMs);
+      for (const entry of lonely) gm.createBotMatch(entry);
+    }
+
     const evicted = matchmaker.evictStale(now);
     for (const e of evicted) {
       io.to(e.socketId).emit('queue:timeout', { message: 'No opponent found. Please try again.' });

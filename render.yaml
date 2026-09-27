@@ -71,5 +71,15 @@ services:
       # redeploy. Left blank, the app shows non-intrusive placeholder ad slots.
       - key: VITE_ADSENSE_CLIENT
         sync: false
+      # Default ad slot. The per-placement slots below are OPTIONAL — each falls
+      # back to this one when left blank, so a single slot fills the whole site.
       - key: VITE_ADSENSE_SLOT
+        sync: false
+      - key: VITE_ADSENSE_SLOT_HOME
+        sync: false
+      - key: VITE_ADSENSE_SLOT_PLAY
+        sync: false
+      - key: VITE_ADSENSE_SLOT_LEADERBOARD
+        sync: false
+      - key: VITE_ADSENSE_SLOT_PROFILE
         sync: false

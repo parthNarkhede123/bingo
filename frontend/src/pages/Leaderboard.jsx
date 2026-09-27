@@ -18,10 +18,11 @@ export default function Leaderboard() {
   return (
     <div className="leaderboard-page">
       <h1>Leaderboard</h1>
-      <Ad label="Sponsored" style={{ margin: '12px 0 20px' }} />
+      <Ad label="Sponsored" placement="leaderboard" style={{ margin: '12px 0 20px' }} />
       {loading && <p className="muted">Loading…</p>}
       {error && <p className="error">{error}</p>}
       {!loading && !error && (
+        <div className="table-wrap">
         <table className="table">
           <thead>
             <tr><th>#</th><th>Player</th><th>Rating</th><th>W</th><th>L</th><th>D</th><th>Games</th></tr>
@@ -43,7 +44,9 @@ export default function Leaderboard() {
             )}
           </tbody>
         </table>
+        </div>
       )}
+      <Ad label="Sponsored" placement="leaderboard" style={{ margin: '22px 0 8px' }} />
     </div>
   );
 }

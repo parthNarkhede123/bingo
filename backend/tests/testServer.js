@@ -18,6 +18,9 @@ process.env.RECONNECT_GRACE_SECONDS = '1';
 process.env.AUTH_RATE_MAX = '100';
 process.env.RATE_MAX = '100000';
 process.env.TURN_SECONDS = '60';
+// Make bots move near-instantly in tests (defaults are 0.6-1.6s in prod).
+process.env.BOT_THINK_MIN_MS = '5';
+process.env.BOT_THINK_SPAN_MS = '10';
 
 let mongod;
 

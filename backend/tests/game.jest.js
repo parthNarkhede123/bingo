@@ -113,3 +113,61 @@ test('rejects an invalid board submission', async () => {
   sockC.close();
   sockD.close();
 });
+
+test('a lone player is matched with a bot, plays a full rated game, and the bot is never persisted', async () => {
+  const { ROSTER } = require('../src/sockets/bots');
+  const User = require('../src/models/User');
+  const MatchModel = require('../src/models/Match');
+  const botNames = new Set(ROSTER.map((b) => b.username));
+
+  const solo = await registerUser('solo_p');
+  const sock = connect(solo.token);
+  await new Promise((r) => sock.on('connect', r));
+
+  let oppName = null;
+  const over = new Promise((resolve) => sock.on('game:over', resolve));
+  sock.on('match:found', (m) => { oppName = m.opponent.username; sock.emit('board:submit', { board: BOARD_A }); });
+
+  // The human always calls the smallest number not yet called on its turn, so
+  // the game is guaranteed to progress and terminate regardless of the bot.
+  const called = new Set();
+  const drive = (turnUserId) => {
+    if (turnUserId !== solo.userId) return;
+    for (let n = 1; n <= 25; n += 1) {
+      if (!called.has(n)) { sock.emit('game:call', { number: n }); return; }
+    }
+  };
+  sock.on('game:start', (s) => drive(s.firstPlayer));
+  sock.on('game:update', (u) => {
+    if (u.number != null) called.add(u.number);
+    if (!u.over) drive(u.nextTurn);
+  });
+
+  // Join, wait until queued, then force the bot fallback immediately instead of
+  // waiting out the timed sweep (exercises takeStaleForBot -> createBotMatch).
+  sock.emit('queue:join');
+  await new Promise((r) => sock.on('queue:waiting', r));
+  const taken = ctx.sockets.matchmaker.takeStaleForBot(Date.now(), 0);
+  expect(taken.length).toBe(1);
+  taken.forEach((e) => ctx.sockets.gm.createBotMatch(e));
+
+  const res = await over;
+  sock.close();
+
+  // Matched against a real-named bot.
+  expect(botNames.has(oppName)).toBe(true);
+  // Decisive, rated outcome with coherent rating math.
+  expect(['win', 'loss', 'draw']).toContain(res.result);
+  expect(res.rated).toBe(true);
+  expect(typeof res.ratingChange).toBe('number');
+  expect(res.newRating).toBe(1000 + res.ratingChange);
+
+  // The bot is ephemeral: never written to the User collection / leaderboard.
+  const botUser = await User.findOne({ username: oppName });
+  expect(botUser).toBeNull();
+
+  // The match WAS persisted for audit, with the bot listed as a player.
+  const match = await MatchModel.findOne({ 'players.username': oppName });
+  expect(match).not.toBeNull();
+  expect(match.rated).toBe(true);
+});

@@ -33,7 +33,7 @@ export default function Home() {
         )}
       </section>
 
-      <Ad label="Sponsored" style={{ margin: '24px 0' }} />
+      <Ad label="Sponsored" placement="home" style={{ margin: '24px 0' }} />
 
       <section className="panel">
         <div className="panel__head">
@@ -62,6 +62,8 @@ export default function Home() {
           <li>First to 5 completed lines wins the match and rating points.</li>
         </ol>
       </section>
+
+      <Ad label="Sponsored" placement="home" style={{ margin: '28px 0 8px' }} />
     </div>
   );
 }

@@ -8,7 +8,16 @@ import { hasAdConsent } from '../api/consent';
  * during development, before AdSense approval, and when a user declines ads.
  */
 const CLIENT = import.meta.env.VITE_ADSENSE_CLIENT;
-const SLOT = import.meta.env.VITE_ADSENSE_SLOT;
+// Per-placement slot ids. Referenced statically so Vite can inline them at build
+// time. Each is optional and falls back to the default slot, so a single
+// configured VITE_ADSENSE_SLOT still fills every placement on the site.
+const SLOTS = {
+  default: import.meta.env.VITE_ADSENSE_SLOT,
+  home: import.meta.env.VITE_ADSENSE_SLOT_HOME || import.meta.env.VITE_ADSENSE_SLOT,
+  play: import.meta.env.VITE_ADSENSE_SLOT_PLAY || import.meta.env.VITE_ADSENSE_SLOT,
+  leaderboard: import.meta.env.VITE_ADSENSE_SLOT_LEADERBOARD || import.meta.env.VITE_ADSENSE_SLOT,
+  profile: import.meta.env.VITE_ADSENSE_SLOT_PROFILE || import.meta.env.VITE_ADSENSE_SLOT,
+};
 
 function loadAdSenseOnce() {
   if (document.querySelector('script[data-adsbygoogle]')) return;
@@ -20,7 +29,7 @@ function loadAdSenseOnce() {
   document.head.appendChild(s);
 }
 
-export default function Ad({ label = 'Advertisement', style }) {
+export default function Ad({ label = 'Advertisement', placement = 'default', format = 'auto', style }) {
   const ref = useRef(null);
   const [consented, setConsented] = useState(hasAdConsent());
 
@@ -31,6 +40,7 @@ export default function Ad({ label = 'Advertisement', style }) {
     return () => window.removeEventListener('bingo-consent', onConsent);
   }, []);
 
+  const slot = SLOTS[placement] || SLOTS.default;
   const showRealAd = !!CLIENT && consented;
 
   useEffect(() => {
@@ -60,8 +70,8 @@ export default function Ad({ label = 'Advertisement', style }) {
         className="adsbygoogle"
         style={{ display: 'block' }}
         data-ad-client={CLIENT}
-        data-ad-slot={SLOT}
-        data-ad-format="auto"
+        data-ad-slot={slot}
+        data-ad-format={format}
         data-full-width-responsive="true"
         ref={ref}
       />

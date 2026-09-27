@@ -9,6 +9,7 @@ const { logger } = require('../utils/logger');
 const User = require('../models/User');
 const MatchModel = require('../models/Match');
 const { mongoose } = require('../config/db');
+const { pickBotFor, chooseBotMove, botThinkDelayMs } = require('./bots');
 
 const PHASE = { SETUP: 'setup', PLAYING: 'playing', OVER: 'over' };
 
@@ -65,7 +66,7 @@ class GameManager {
         [pB.userId]: mkPlayer(pB, boardB),
       },
       order: [pA.userId, pB.userId],
-      timers: { setup: null, turn: null, reconnect: {} },
+      timers: { setup: null, turn: null, bot: null, reconnect: {} },
     };
 
     this.sessions.set(matchId, session);
@@ -138,13 +139,19 @@ class GameManager {
     }
 
     const turnDeadline = Date.now() + config.game.turnSeconds * 1000;
-    this.io.to(session.matchId).emit('game:start', {
-      matchId: session.matchId,
-      firstPlayer: session.match.turn,
-      turnSeconds: config.game.turnSeconds,
-      turnDeadline,
-    });
+    // Sent per-player so each client syncs to its authoritative board (the one it
+    // locked in, or the server-assigned board if it never submitted).
+    for (const uid of session.order) {
+      this.emitToUser(session, uid, 'game:start', {
+        matchId: session.matchId,
+        firstPlayer: session.match.turn,
+        yourBoard: session.players[uid].board,
+        turnSeconds: config.game.turnSeconds,
+        turnDeadline,
+      });
+    }
     this.armTurnTimer(session);
+    this.maybeBotMove(session);
     logger.info(`Match ${session.matchId} started`);
   }
 
@@ -154,6 +161,37 @@ class GameManager {
       () => this.handleTurnTimeout(session),
       config.game.turnSeconds * 1000
     );
+  }
+
+  /**
+   * If it is a bot's turn during play, schedule its move after a short,
+   * human-like "thinking" pause. The turn timer still backstops it. No-ops for
+   * human turns and never double-schedules.
+   */
+  maybeBotMove(session) {
+    if (session.phase !== PHASE.PLAYING) return;
+    const uid = session.match.turn;
+    if (!uid) return;
+    const player = session.players[uid];
+    if (!player || !player.isBot) return;
+    if (session.timers.bot) return; // already scheduled
+
+    session.timers.bot = setTimeout(() => {
+      session.timers.bot = null;
+      // The game may have ended or the turn advanced while we waited.
+      if (session.phase !== PHASE.PLAYING || session.match.turn !== uid) return;
+      const number = chooseBotMove(session.match, uid, player.randomness);
+      if (number == null) return;
+      const res = session.match.call(uid, number, Date.now() - (session.startedAt || Date.now()));
+      if (res.ok) this.applyCallResult(session, res.result, { auto: false });
+    }, botThinkDelayMs());
+  }
+
+  /** Pair a waiting human with the closest-rated bot (no human available). */
+  createBotMatch(entry) {
+    const bot = pickBotFor(entry.rating);
+    // Human is player A, bot is player B; createMatch randomizes who moves first.
+    return this.createMatch(entry, bot);
   }
 
   /** A player calls a number on their turn. */
@@ -174,6 +212,10 @@ class GameManager {
       clearTimeout(session.timers.turn);
       session.timers.turn = null;
     }
+    if (session.timers.bot) {
+      clearTimeout(session.timers.bot);
+      session.timers.bot = null;
+    }
 
     const turnDeadline = result.over ? null : Date.now() + config.game.turnSeconds * 1000;
 
@@ -193,6 +235,7 @@ class GameManager {
       this.finalize(session, { winner: result.winner, reason: result.reason });
     } else {
       this.armTurnTimer(session);
+      this.maybeBotMove(session);
     }
   }
 
@@ -238,6 +281,7 @@ class GameManager {
     if (!res.ok) return res;
     if (session.timers.setup) { clearTimeout(session.timers.setup); session.timers.setup = null; }
     if (session.timers.turn) { clearTimeout(session.timers.turn); session.timers.turn = null; }
+    if (session.timers.bot) { clearTimeout(session.timers.bot); session.timers.bot = null; }
     this.finalize(session, { winner: res.result.winner, reason });
     return { ok: true };
   }
@@ -300,6 +344,7 @@ class GameManager {
     session.phase = PHASE.OVER;
     if (session.timers.turn) { clearTimeout(session.timers.turn); session.timers.turn = null; }
     if (session.timers.setup) { clearTimeout(session.timers.setup); session.timers.setup = null; }
+    if (session.timers.bot) { clearTimeout(session.timers.bot); session.timers.bot = null; }
     for (const t of Object.values(session.timers.reconnect)) clearTimeout(t);
     session.timers.reconnect = {};
 
@@ -344,27 +389,35 @@ class GameManager {
 
   async persistResult(session, { winner, reason, outcome, isDraw, rated }) {
     const [aId, bId] = session.order;
-    const a = await User.findById(aId);
-    const b = await User.findById(bId);
-    if (!a || !b) throw new Error('Player record missing');
+    const pa = session.players[aId];
+    const pb = session.players[bId];
 
-    // ratingBefore is taken from the SAME fresh DB value used to compute the new
-    // rating, so ratingBefore + delta === ratingAfter always holds in the record.
-    const beforeA = a.rating;
-    const beforeB = b.rating;
+    // Bots are ephemeral virtual players: not in the User collection, never gain
+    // or lose rating/stats, never on the leaderboard. Load only human record(s).
+    const a = pa.isBot ? null : await User.findById(aId);
+    const b = pb.isBot ? null : await User.findById(bId);
+    if ((!pa.isBot && !a) || (!pb.isBot && !b)) throw new Error('Player record missing');
+
+    // ratingBefore is the SAME value fed to computeRatings (fresh DB rating for a
+    // human, fixed roster rating for a bot), so ratingBefore + delta === ratingAfter.
+    const beforeA = a ? a.rating : pa.rating;
+    const beforeB = b ? b.rating : pb.rating;
 
     let deltas;
     if (rated) {
+      // The human's delta already reflects the opponent's rating, so beating a
+      // higher-rated bot yields more points and losing to a lower-rated one costs
+      // more -- the same Elo math as a human opponent. A bot's own rating is fixed.
       const ratings = computeRatings(
-        { rating: a.rating, gamesPlayed: a.gamesPlayed },
-        { rating: b.rating, gamesPlayed: b.gamesPlayed },
+        { rating: beforeA, gamesPlayed: a ? a.gamesPlayed : 0 },
+        { rating: beforeB, gamesPlayed: b ? b.gamesPlayed : 0 },
         outcome
       );
-      applyStats(a, isDraw ? 'draw' : winner === aId ? 'win' : 'loss', ratings.a.newRating);
-      applyStats(b, isDraw ? 'draw' : winner === bId ? 'win' : 'loss', ratings.b.newRating);
+      if (a) applyStats(a, isDraw ? 'draw' : winner === aId ? 'win' : 'loss', ratings.a.newRating);
+      if (b) applyStats(b, isDraw ? 'draw' : winner === bId ? 'win' : 'loss', ratings.b.newRating);
       deltas = {
-        a: { newRating: ratings.a.newRating, delta: ratings.a.delta },
-        b: { newRating: ratings.b.newRating, delta: ratings.b.delta },
+        a: a ? { newRating: ratings.a.newRating, delta: ratings.a.delta } : { newRating: beforeA, delta: 0 },
+        b: b ? { newRating: ratings.b.newRating, delta: ratings.b.delta } : { newRating: beforeB, delta: 0 },
       };
     } else {
       // Unrated abort: no rating/stat change.
@@ -377,12 +430,12 @@ class GameManager {
     const matchDoc = {
       players: [
         {
-          userId: a._id, username: a.username,
+          userId: a ? a._id : aId, username: a ? a.username : pa.username,
           ratingBefore: beforeA, ratingAfter: deltas.a.newRating,
           ratingDelta: deltas.a.delta, board: session.match.boards[aId],
         },
         {
-          userId: b._id, username: b.username,
+          userId: b ? b._id : bId, username: b ? b.username : pb.username,
           ratingBefore: beforeB, ratingAfter: deltas.b.newRating,
           ratingDelta: deltas.b.delta, board: session.match.boards[bId],
         },
@@ -403,7 +456,12 @@ class GameManager {
     // dev / in-memory test) transactions are unsupported, so we fall back to
     // sequential writes.
     const writeAll = async (opts) => {
-      if (rated) await Promise.all([a.save(opts), b.save(opts)]);
+      if (rated) {
+        const saves = [];
+        if (a) saves.push(a.save(opts));
+        if (b) saves.push(b.save(opts));
+        if (saves.length) await Promise.all(saves);
+      }
       await MatchModel.create([matchDoc], opts);
     };
 
@@ -448,9 +506,11 @@ class GameManager {
     for (const session of this.sessions.values()) {
       if (session.timers.setup) clearTimeout(session.timers.setup);
       if (session.timers.turn) clearTimeout(session.timers.turn);
+      if (session.timers.bot) clearTimeout(session.timers.bot);
       for (const t of Object.values(session.timers.reconnect)) clearTimeout(t);
       session.timers.setup = null;
       session.timers.turn = null;
+      session.timers.bot = null;
       session.timers.reconnect = {};
     }
   }
@@ -473,8 +533,10 @@ function mkPlayer(p, board) {
     rating: p.rating,
     socketId: p.socketId,
     board: board.slice(),
-    ready: false,
+    ready: !!p.isBot,
     connected: true,
+    isBot: !!p.isBot,
+    randomness: p.randomness || 0,
     timeouts: 0,
   };
 }
