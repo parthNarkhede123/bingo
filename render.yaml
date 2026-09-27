@@ -1,0 +1,75 @@
+# Render Blueprint — provisions the whole app from this repo.
+# In the Render dashboard: New + > Blueprint > connect this repo. Render reads
+# this file, creates both services, and redeploys automatically on every push
+# to the default branch (autoDeployTrigger: commit).
+#
+# Public URLs are derived from the service names below:
+#   Frontend : https://bingo-arena.onrender.com
+#   Backend  : https://bingo-arena-api.onrender.com
+# If either name is already taken globally, Render appends a suffix. If that
+# happens, update CLIENT_ORIGIN (backend) and VITE_API_URL (frontend) to the
+# real URLs shown in the dashboard, then redeploy. That is the only manual fix.
+
+services:
+  # ---------- Backend: Express + Socket.IO API ----------
+  - type: web
+    runtime: node
+    name: bingo-arena-api
+    rootDir: backend
+    plan: free
+    region: oregon
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true          # Render generates a strong secret
+      - key: JWT_EXPIRES_IN
+        value: 2d
+      - key: TRUST_PROXY
+        value: "1"                   # Render terminates TLS at its proxy
+      - key: MONGO_URI
+        sync: false                  # paste your Atlas connection string once
+      - key: CLIENT_ORIGIN
+        value: https://bingo-arena.onrender.com
+
+  # ---------- Frontend: React + Vite static site ----------
+  - type: web
+    runtime: static
+    name: bingo-arena
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: commit
+    # SPA fallback so client-side routes (/play, /privacy, ...) resolve.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    # Light security headers for the static assets.
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: VITE_API_URL
+        value: https://bingo-arena-api.onrender.com
+      # Fill these in the dashboard once AdSense approves your site, then
+      # redeploy. Left blank, the app shows non-intrusive placeholder ad slots.
+      - key: VITE_ADSENSE_CLIENT
+        sync: false
+      - key: VITE_ADSENSE_SLOT
+        sync: false
