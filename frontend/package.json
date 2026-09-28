@@ -1,7 +1,7 @@
 {
-  "name": "bingo-frontend",
+  "name": "ironhold-frontend",
   "version": "1.0.0",
-  "description": "Real-time multiplayer Bingo frontend (React + Vite)",
+  "description": "Ironhold — week-long strategy/trade-war game frontend (React + Vite)",
   "private": true,
   "type": "module",
   "scripts": {

@@ -1,5 +1,5 @@
 // Terms of Service.
-const CONTACT_EMAIL = 'bingo.arena.support@gmail.com';
+const CONTACT_EMAIL = 'ironhold.game.support@gmail.com';
 const LAST_UPDATED = 'September 2026';
 
 export default function Terms() {
@@ -9,16 +9,15 @@ export default function Terms() {
       <p className="muted">Last updated: {LAST_UPDATED}</p>
 
       <p>
-        By creating an account or playing Bingo Arena, you agree to these terms.
+        By creating an account or playing Ironhold, you agree to these terms.
         If you do not agree, please do not use the service.
       </p>
 
       <h2>The service</h2>
       <p>
-        Bingo Arena is a free, for-entertainment online multiplayer Bingo game
-        with rankings and a leaderboard. There is <strong>no real-money
-        gambling, wagering, or cash prizes</strong>. Ratings and standings have
-        no monetary value.
+        Ironhold is a free, for-entertainment online multiplayer strategy game
+        with week-long seasons, rankings and a leaderboard. There is <strong>no real-money
+        gambling, wagering, or cash prizes</strong>. Conquest Points, gems and standings have no monetary value.
       </p>
 
       <h2>Your account</h2>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import Ad from '../components/Ad';
 
@@ -16,44 +16,35 @@ export default function Profile() {
   if (error) return <p className="error">{error}</p>;
   if (!data) return <p className="muted">Loading…</p>;
 
-  const { player, history } = data;
-  const winRate = player.gamesPlayed ? Math.round((player.wins / player.gamesPlayed) * 100) : 0;
+  const { player } = data;
 
   return (
     <div className="profile">
       <div className="profile-head">
         <h1>{player.username}</h1>
-        <div className="rank-badge">Rank #{player.rank}</div>
+        {player.inSeason && player.rank ? (
+          <div className="rank-badge">Rank #{player.rank}</div>
+        ) : (
+          <div className="rank-badge rank-badge--out">Not in this season</div>
+        )}
       </div>
       <div className="stat-row">
-        <div className="stat"><span>{player.rating}</span><small>Rating</small></div>
-        <div className="stat"><span>{player.peakRating}</span><small>Peak</small></div>
-        <div className="stat"><span>{player.wins}</span><small>Wins</small></div>
-        <div className="stat"><span>{player.losses}</span><small>Losses</small></div>
-        <div className="stat"><span>{player.draws}</span><small>Draws</small></div>
-        <div className="stat"><span>{winRate}%</span><small>Win rate</small></div>
+        <div className="stat"><span>👑 {player.cp}</span><small>Conquest Pts</small></div>
+        <div className="stat"><span>{player.level}</span><small>Level</small></div>
+        <div className="stat"><span>{player.crowns}</span><small>Crowns</small></div>
+        <div className="stat"><span>{player.seasonsPlayed}</span><small>Seasons</small></div>
       </div>
 
       <Ad label="Sponsored" placement="profile" style={{ margin: '4px 0 24px' }} />
 
-      <h2>Recent games</h2>
-      <div className="table-wrap">
-      <table className="table">
-        <thead><tr><th>Opponent</th><th>Result</th><th>Δ Rating</th></tr></thead>
-        <tbody>
-          {history.map((h, i) => (
-            <tr key={i}>
-              <td>{h.opponent}</td>
-              <td className={`result-cell result-cell--${h.outcome}`}>{h.outcome}</td>
-              <td className={h.ratingDelta >= 0 ? 'pos' : 'neg'}>
-                {h.ratingDelta >= 0 ? '+' : ''}{h.ratingDelta}
-              </td>
-            </tr>
-          ))}
-          {history.length === 0 && <tr><td colSpan="3" className="muted center">No games yet.</td></tr>}
-        </tbody>
-      </table>
-      </div>
+      <section className="panel">
+        <p className="muted">
+          {player.inSeason
+            ? `${player.username} holds a Keep this season. Crowns are earned by finishing a season at #1.`
+            : `${player.username} hasn't claimed a Hold this season.`}
+        </p>
+        <Link to="/leaderboard" className="btn btn-ghost">See the full ladder →</Link>
+      </section>
 
       <Ad label="Sponsored" placement="profile" style={{ margin: '24px 0 8px' }} />
     </div>

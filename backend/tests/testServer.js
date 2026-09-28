@@ -13,14 +13,9 @@ process.env.NODE_ENV = 'test';
 // Tests don't need production-strength hashing; the low cost keeps the brute-force
 // rate-limit test (100+ bcrypt.compare calls) well under Jest's timeout on slow CI.
 process.env.BCRYPT_ROUNDS = '4';
-process.env.SETUP_SECONDS = '60';
-process.env.RECONNECT_GRACE_SECONDS = '1';
 process.env.AUTH_RATE_MAX = '100';
 process.env.RATE_MAX = '100000';
-process.env.TURN_SECONDS = '60';
-// Make bots move near-instantly in tests (defaults are 0.6-1.6s in prod).
-process.env.BOT_THINK_MIN_MS = '5';
-process.env.BOT_THINK_SPAN_MS = '10';
+process.env.SWEEP_INTERVAL_MS = '3600000'; // effectively disable the sweeper during tests
 
 let mongod;
 
@@ -47,7 +42,6 @@ async function startTestServer() {
 async function stopTestServer(ctx) {
   if (ctx && ctx.sockets) ctx.sockets.stop(); // clears sweep interval + current timers
   if (ctx && ctx.sockets && ctx.sockets.io) ctx.sockets.io.close(); // disconnects sockets (may arm grace timers)
-  if (ctx && ctx.sockets && ctx.sockets.gm) ctx.sockets.gm.shutdown(); // clear any timers armed during close
   if (ctx && ctx.server) await new Promise((r) => ctx.server.close(r));
   const { disconnectDB } = require('../src/config/db');
   await disconnectDB();

@@ -1,4 +1,4 @@
-# Render Blueprint — provisions the whole app from this repo.
+# Render Blueprint — provisions the whole Ironhold app from this repo.
 # In the Render dashboard: New + > Blueprint > connect this repo. Render reads
 # this file, creates both services, and redeploys automatically on every push
 # to the default branch (autoDeployTrigger: commit).
@@ -55,7 +55,7 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: MAIL_FROM
-        sync: false                # e.g. "Bingo Arena <bingo.arena.support@gmail.com>"
+        sync: false                # e.g. "Ironhold <ironhold.game.support@gmail.com>"
 
   # ---------- Frontend: React + Vite static site ----------
   - type: web
@@ -65,7 +65,7 @@ services:
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
     autoDeployTrigger: commit
-    # SPA fallback so client-side routes (/play, /privacy, ...) resolve.
+    # SPA fallback so client-side routes (/keep, /map, /privacy, ...) resolve.
     routes:
       - type: rewrite
         source: /*

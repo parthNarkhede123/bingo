@@ -5,7 +5,7 @@
 // requires a certified Consent Management Platform (CMP); see docs/SECURITY.md
 // and the deployment guide.
 
-const KEY = 'bingo_consent'; // 'granted' | 'denied' | null (undecided)
+const KEY = 'ironhold_consent'; // 'granted' | 'denied' | null (undecided)
 
 export function getConsent() {
   try {
@@ -22,7 +22,7 @@ export function setConsent(value) {
     /* storage unavailable; consent simply won't persist */
   }
   // Let Ad slots react without a full reload.
-  window.dispatchEvent(new CustomEvent('bingo-consent', { detail: value }));
+  window.dispatchEvent(new CustomEvent('ironhold-consent', { detail: value }));
 }
 
 export function hasAdConsent() {

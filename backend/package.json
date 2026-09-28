@@ -1,7 +1,7 @@
 {
-  "name": "bingo-backend",
+  "name": "ironhold-backend",
   "version": "1.0.0",
-  "description": "Real-time multiplayer Bingo backend (Express + Socket.IO + MongoDB)",
+  "description": "Ironhold — week-long browser strategy/trade-war game backend (Express + Socket.IO + MongoDB)",
   "main": "src/index.js",
   "engines": {
     "node": ">=18"

@@ -2,22 +2,27 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import Ad from '../components/Ad';
+import { num } from '../game/format';
 
 export default function Leaderboard() {
   const [rows, setRows] = useState([]);
+  const [meta, setMeta] = useState({ season: null, endsAt: null });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.leaderboard(100)
-      .then((d) => setRows(d.leaderboard))
+      .then((d) => { setRows(d.leaderboard || []); setMeta({ season: d.season, endsAt: d.endsAt }); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
   return (
     <div className="leaderboard-page">
-      <h1>Leaderboard</h1>
+      <h1>Conquest Ladder</h1>
+      {meta.season != null && (
+        <p className="muted">Season {meta.season}{meta.endsAt ? ` · ends ${new Date(meta.endsAt).toLocaleDateString()}` : ''} — highest Conquest Points takes the crown.</p>
+      )}
       <Ad label="Sponsored" placement="leaderboard" style={{ margin: '12px 0 20px' }} />
       {loading && <p className="muted">Loading…</p>}
       {error && <p className="error">{error}</p>}
@@ -25,22 +30,20 @@ export default function Leaderboard() {
         <div className="table-wrap">
         <table className="table">
           <thead>
-            <tr><th>#</th><th>Player</th><th>Rating</th><th>W</th><th>L</th><th>D</th><th>Games</th></tr>
+            <tr><th>#</th><th>Lord</th><th>👑 CP</th><th>Level</th><th>Troops</th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.username}>
                 <td>{r.rank}</td>
                 <td><Link to={`/profile/${r.username}`}>{r.username}</Link></td>
-                <td className="strong">{r.rating}</td>
-                <td>{r.wins}</td>
-                <td>{r.losses}</td>
-                <td>{r.draws}</td>
-                <td>{r.gamesPlayed}</td>
+                <td className="strong">{num(r.cp)}</td>
+                <td>{r.level}</td>
+                <td>{num(r.troops)}</td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan="7" className="muted center">No ranked players yet.</td></tr>
+              <tr><td colSpan="5" className="muted center">No lords ranked yet.</td></tr>
             )}
           </tbody>
         </table>

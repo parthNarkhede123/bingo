@@ -7,7 +7,7 @@ import { API_URL } from './client';
 let socket = null;
 
 export function getSocket() {
-  const token = localStorage.getItem('bingo_token');
+  const token = localStorage.getItem('ironhold_token');
   if (!token) return null;
   if (socket && socket.connected) return socket;
   if (!socket) {

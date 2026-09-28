@@ -25,7 +25,7 @@ const config = {
     .map((s) => s.trim())
     .filter(Boolean),
 
-  mongoUri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/bingo',
+  mongoUri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/ironhold',
 
   jwt: {
     // No baked-in fallback. A weak/missing value is caught by
@@ -56,7 +56,7 @@ const config = {
     smtpSecure: (process.env.SMTP_SECURE || '0') === '1', // true only for port 465
     smtpUser: process.env.SMTP_USER || '',
     smtpPass: process.env.SMTP_PASS || '',
-    from: process.env.MAIL_FROM || 'Bingo Arena <no-reply@bingo-arena.local>',
+    from: process.env.MAIL_FROM || 'Ironhold <no-reply@ironhold.local>',
   },
 
   passwordReset: {
@@ -68,23 +68,17 @@ const config = {
     resendCooldownMs: intEnv('RESET_RESEND_COOLDOWN_MS', 5 * 60 * 1000),
   },
 
-  game: {
-    setupSeconds: intEnv('SETUP_SECONDS', 30),
-    turnSeconds: intEnv('TURN_SECONDS', 20),
-    reconnectGraceSeconds: intEnv('RECONNECT_GRACE_SECONDS', 30),
-    maxTimeoutsBeforeForfeit: intEnv('MAX_TIMEOUTS', 3),
-  },
-
-  matchmaking: {
-    // Hard cap on the in-memory queue to bound memory + the sweep cost.
-    maxQueueSize: intEnv('MAX_QUEUE_SIZE', 5000),
-    // Entries waiting longer than this are evicted (client is told to retry).
-    maxWaitMs: intEnv('MAX_QUEUE_WAIT_MS', 120000),
-    // When no human opponent appears within this window, match the waiting
-    // player against a bot so they never get stuck "finding an opponent".
-    botFallbackMs: intEnv('BOT_FALLBACK_MS', 7000),
-    // Master switch for bot fallback (set BOTS_ENABLED=0 to disable).
-    botsEnabled: (process.env.BOTS_ENABLED || '1') !== '0',
+  ironhold: {
+    // A season is one week (the "Siege Week"). Tunable for testing.
+    seasonDays: intEnv('SEASON_DAYS', 7),
+    // Grace at boot: if no active season exists, one is created automatically.
+    autoStartSeason: (process.env.AUTO_START_SEASON || '1') !== '0',
+    // How often the background sweeper resolves due marches, spawns/expires
+    // wild mines, and checks for the season bell (ms).
+    sweepIntervalMs: intEnv('SWEEP_INTERVAL_MS', 20000),
+    // Target number of live wild mines on the map at once.
+    mineTarget: intEnv('MINE_TARGET', 12),
+    mineTtlMs: intEnv('MINE_TTL_MS', 30 * 60 * 1000),
   },
 
   socket: {

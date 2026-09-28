@@ -7,12 +7,13 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link to="/" className="brand">🎯 Bingo Arena</Link>
+      <Link to={user ? '/keep' : '/'} className="brand">🛡️ Ironhold</Link>
       <div className="nav-links">
         <Link to="/leaderboard">Leaderboard</Link>
         {user ? (
           <>
-            <Link to={`/profile/${user.username}`}>{user.username} · {user.rating}</Link>
+            <Link to="/keep" className="nav-play">Play</Link>
+            <Link to={`/profile/${user.username}`}>{user.username}</Link>
             <button className="btn btn-ghost" onClick={() => { logout(); navigate('/login'); }}>
               Logout
             </button>

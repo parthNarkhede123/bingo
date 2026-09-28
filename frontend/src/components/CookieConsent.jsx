@@ -25,7 +25,7 @@ export default function CookieConsent() {
     <div className="cookie-banner" role="dialog" aria-label="Cookie consent">
       <div className="cookie-text">
         We use cookies for login and, if you allow it, to show ads that keep
-        Bingo Arena free. See our <Link to="/privacy">Privacy Policy</Link>.
+        Ironhold free. See our <Link to="/privacy">Privacy Policy</Link>.
       </div>
       <div className="cookie-actions">
         <button className="btn btn-ghost btn-small" onClick={() => choose('denied')}>

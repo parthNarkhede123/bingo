@@ -3,11 +3,12 @@
 const express = require('express');
 const { query, param, validationResult } = require('express-validator');
 const User = require('../models/User');
-const Match = require('../models/Match');
+const Hold = require('../models/Hold');
+const { ensureSeason } = require('../services/season');
 
 const router = express.Router();
 
-// GET /api/leaderboard?limit=50
+// GET /api/leaderboard?limit=50 — current season, ranked by Conquest Points.
 router.get(
   '/',
   [query('limit').optional().isInt({ min: 1, max: 100 }).toInt()],
@@ -16,27 +17,28 @@ router.get(
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
     try {
       const limit = req.query.limit || 50;
-      const users = await User.find({ gamesPlayed: { $gt: 0 } })
-        .sort({ rating: -1, wins: -1 })
+      const season = await ensureSeason();
+      if (!season) return res.json({ leaderboard: [] });
+      const holds = await Hold.find({ season: season.number })
+        .sort({ cp: -1, level: -1 })
         .limit(limit)
+        .select('username cp level troops')
         .lean();
-      const leaderboard = users.map((u, i) => ({
+      const leaderboard = holds.map((h, i) => ({
         rank: i + 1,
-        username: u.username,
-        rating: u.rating,
-        wins: u.wins,
-        losses: u.losses,
-        draws: u.draws,
-        gamesPlayed: u.gamesPlayed,
+        username: h.username,
+        cp: h.cp,
+        level: h.level,
+        troops: h.troops,
       }));
-      return res.json({ leaderboard });
+      return res.json({ season: season.number, endsAt: season.endsAt, leaderboard });
     } catch (err) {
       return next(err);
     }
   }
 );
 
-// GET /api/leaderboard/player/:username
+// GET /api/leaderboard/player/:username — a player's standing this season.
 router.get(
   '/player/:username',
   [param('username').isString().trim().isLength({ min: 3, max: 20 })
@@ -45,44 +47,21 @@ router.get(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
     try {
-      const usernameLower = req.params.username.toLowerCase();
-      const user = await User.findOne({ usernameLower }).lean();
+      const user = await User.findOne({ usernameLower: req.params.username.toLowerCase() }).lean();
       if (!user) return res.status(404).json({ error: 'Player not found.' });
-
-      const rank = await User.countDocuments({ rating: { $gt: user.rating } });
-
-      const recent = await Match.find({ 'players.userId': user._id })
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .lean();
-
-      const history = recent.map((m) => {
-        const me = m.players.find((p) => p.userId && p.userId.toString() === user._id.toString());
-        const opp = m.players.find((p) => !p.userId || p.userId.toString() !== user._id.toString());
-        let outcome = 'draw';
-        if (m.result === 'decided') {
-          outcome = m.winner && m.winner.toString() === user._id.toString() ? 'win' : 'loss';
-        }
-        return {
-          opponent: opp ? opp.username : 'Unknown',
-          outcome,
-          ratingDelta: me ? me.ratingDelta : 0,
-          endedAt: m.endedAt,
-        };
-      });
-
+      const season = await ensureSeason();
+      const hold = season ? await Hold.findOne({ userId: user._id, season: season.number }).lean() : null;
+      const rank = hold ? (await Hold.countDocuments({ season: season.number, cp: { $gt: hold.cp } })) + 1 : null;
       return res.json({
         player: {
           username: user.username,
-          rating: user.rating,
-          peakRating: user.peakRating,
-          rank: rank + 1,
-          wins: user.wins,
-          losses: user.losses,
-          draws: user.draws,
-          gamesPlayed: user.gamesPlayed,
+          crowns: user.stats?.crowns || 0,
+          seasonsPlayed: user.stats?.seasonsPlayed || 0,
+          cp: hold ? hold.cp : 0,
+          level: hold ? hold.level : 0,
+          rank,
+          inSeason: !!hold,
         },
-        history,
       });
     } catch (err) {
       return next(err);

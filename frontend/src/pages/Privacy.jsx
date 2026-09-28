@@ -1,5 +1,5 @@
 // Privacy Policy. Required for Google AdSense and general compliance.
-const CONTACT_EMAIL = 'bingo.arena.support@gmail.com';
+const CONTACT_EMAIL = 'ironhold.game.support@gmail.com';
 const LAST_UPDATED = 'September 2026';
 
 export default function Privacy() {
@@ -9,15 +9,15 @@ export default function Privacy() {
       <p className="muted">Last updated: {LAST_UPDATED}</p>
 
       <p>
-        Bingo Arena ("we", "us") operates this website, a free online
-        multiplayer Bingo game. This policy explains what we collect, why, and
+        Ironhold ("we", "us") operates this website, a free online multiplayer
+        strategy game. This policy explains what we collect, why, and
         your choices.
       </p>
 
       <h2>Information we collect</h2>
       <ul>
         <li><strong>Account data:</strong> your username and email address, and a securely hashed (never plaintext) password.</li>
-        <li><strong>Gameplay data:</strong> your rating, wins, losses, draws, and match history, used for ranking and the leaderboard.</li>
+        <li><strong>Gameplay data:</strong> your Hold state, Conquest Points, level, and season standing, used for ranking and the leaderboard.</li>
         <li><strong>Technical data:</strong> your IP address and basic connection metadata, used only to rate-limit abuse and keep the service secure. We do not sell this.</li>
       </ul>
 
@@ -39,8 +39,7 @@ export default function Privacy() {
 
       <h2>How we use your data</h2>
       <p>
-        To run your account, match you with opponents, maintain rankings and the
-        leaderboard, keep the service secure, and (with consent) show ads. We do
+        To run your account, run seasons and the map, maintain rankings and the leaderboard, keep the service secure, and (with consent) show ads. We do
         not sell your personal data.
       </p>
 

@@ -10,24 +10,25 @@ export default function Home() {
   const [top, setTop] = useState([]);
 
   useEffect(() => {
-    api.leaderboard(5).then((d) => setTop(d.leaderboard)).catch(() => {});
+    api.leaderboard(5).then((d) => setTop(d.leaderboard || [])).catch(() => {});
   }, []);
 
   return (
     <div className="home">
       <section className="hero">
-        <h1>Ranked Multiplayer Bingo</h1>
+        <h1>Ironhold — The Siege Week</h1>
         <p className="muted">
-          Arrange your 5×5 board, call numbers turn by turn, and race to five lines.
-          First to <strong>B-I-N-G-O</strong> wins and climbs the ladder.
+          Rule a Hold for one week-long season. Harvest your land's <strong>one</strong> material,
+          <strong> trade</strong> for the rest, forge gear from chests, march on rivals or mine the wilds,
+          and forge (or break) pacts. Top the <strong>Conquest Points</strong> ladder before the week ends.
         </p>
         {user ? (
-          <button className="btn btn-primary btn-lg" onClick={() => navigate('/play')}>
-            ▶ Find a Match
+          <button className="btn btn-primary btn-lg" onClick={() => navigate('/keep')}>
+            ▶ Enter your Keep
           </button>
         ) : (
           <div className="cta-row">
-            <Link to="/register" className="btn btn-primary btn-lg">Play free</Link>
+            <Link to="/register" className="btn btn-primary btn-lg">Claim a Hold</Link>
             <Link to="/login" className="btn btn-ghost btn-lg">Sign in</Link>
           </div>
         )}
@@ -37,7 +38,7 @@ export default function Home() {
 
       <section className="panel">
         <div className="panel__head">
-          <h2>Top players</h2>
+          <h2>Top lords this season</h2>
           <Link to="/leaderboard">View all →</Link>
         </div>
         <ol className="mini-leaderboard">
@@ -45,21 +46,21 @@ export default function Home() {
             <li key={p.username}>
               <span className="rank">#{p.rank}</span>
               <Link to={`/profile/${p.username}`}>{p.username}</Link>
-              <span className="rating">{p.rating}</span>
+              <span className="rating">👑 {p.cp}</span>
             </li>
           ))}
-          {top.length === 0 && <li className="muted">No ranked games yet — be the first!</li>}
+          {top.length === 0 && <li className="muted">No lords ranked yet — be the first!</li>}
         </ol>
       </section>
 
       <section className="how">
-        <h2>How to play</h2>
+        <h2>How the week works</h2>
         <ol>
-          <li>Get matched with an opponent near your rating.</li>
-          <li>Arrange numbers 1–25 on your board during the setup timer.</li>
-          <li>Take turns calling numbers. Every call marks both boards.</li>
-          <li>Complete rows, columns, or diagonals to earn B-I-N-G-O letters.</li>
-          <li>First to 5 completed lines wins the match and rating points.</li>
+          <li>Claim a Hold on the map — your biome yields a single unique material.</li>
+          <li>Because you make only one material, <strong>trade</strong> in the Bazaar for the others.</li>
+          <li>Open chests and forge gear; equip it across four stances — Assault, Bulwark, Harvest, March.</li>
+          <li>March to raid rival Holds, occupy wild mines, or scout with Wren. Recruit Durgan to auto-command.</li>
+          <li>Earn Conquest Points from battles, trades, quests and upgrades. Highest CP when the season ends wins a crown.</li>
         </ol>
       </section>
 

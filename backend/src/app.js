@@ -9,6 +9,11 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/auth');
 const leaderboardRoutes = require('./routes/leaderboard');
+const holdRoutes = require('./routes/hold');
+const gearRoutes = require('./routes/gear');
+const marchRoutes = require('./routes/march');
+const tradeRoutes = require('./routes/trade');
+const economyRoutes = require('./routes/economy');
 
 /**
  * Build the Express app. Kept separate from the HTTP/Socket server so it can be
@@ -59,6 +64,13 @@ function createApp() {
 
   app.use('/api/auth', authRoutes);
   app.use('/api/leaderboard', leaderboardRoutes);
+
+  // Ironhold game API (all require auth via each router's middleware).
+  app.use('/api/hold', holdRoutes);
+  app.use('/api', gearRoutes);    // /chests, /gear, /craft
+  app.use('/api', marchRoutes);   // /march, /scout, /reports
+  app.use('/api/trade', tradeRoutes); // /trade/offers, /trade/pacts
+  app.use('/api', economyRoutes); // /commanders, /ads, /quests, /map
 
   app.use(notFound);
   app.use(errorHandler);

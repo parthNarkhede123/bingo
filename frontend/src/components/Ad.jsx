@@ -36,8 +36,8 @@ export default function Ad({ label = 'Advertisement', placement = 'default', for
   // React to consent changes without a full page reload.
   useEffect(() => {
     const onConsent = () => setConsented(hasAdConsent());
-    window.addEventListener('bingo-consent', onConsent);
-    return () => window.removeEventListener('bingo-consent', onConsent);
+    window.addEventListener('ironhold-consent', onConsent);
+    return () => window.removeEventListener('ironhold-consent', onConsent);
   }, []);
 
   const slot = SLOTS[placement] || SLOTS.default;

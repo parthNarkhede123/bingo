@@ -10,7 +10,7 @@ export function AuthProvider({ children }) {
 
   // On boot, if we have a token, fetch the current user to validate the session.
   useEffect(() => {
-    const token = localStorage.getItem('bingo_token');
+    const token = localStorage.getItem('ironhold_token');
     if (!token) {
       setLoading(false);
       return;
@@ -18,12 +18,12 @@ export function AuthProvider({ children }) {
     api
       .me()
       .then((data) => setUser(data.user))
-      .catch(() => localStorage.removeItem('bingo_token'))
+      .catch(() => localStorage.removeItem('ironhold_token'))
       .finally(() => setLoading(false));
   }, []);
 
   const persist = useCallback((data) => {
-    localStorage.setItem('bingo_token', data.token);
+    localStorage.setItem('ironhold_token', data.token);
     setUser(data.user);
   }, []);
 
@@ -40,12 +40,12 @@ export function AuthProvider({ children }) {
   }, [persist]);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('bingo_token');
+    localStorage.removeItem('ironhold_token');
     disconnectSocket();
     setUser(null);
   }, []);
 
-  // Allow other views (e.g. after a match) to refresh rating/stats.
+  // Allow other views to refresh the signed-in user (crowns, titles, etc.).
   const refresh = useCallback(async () => {
     try {
       const data = await api.me();

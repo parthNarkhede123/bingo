@@ -3,6 +3,7 @@
 const http = require('http');
 const { createApp } = require('./app');
 const { attachSockets } = require('./sockets');
+const { startSweeper } = require('./services/sweeper');
 const { connectDB } = require('./config/db');
 const { config, assertProductionSafety } = require('./config');
 const { logger } = require('./utils/logger');
@@ -15,15 +16,17 @@ async function main() {
   const app = createApp();
   const server = http.createServer(app);
   const sockets = attachSockets(server);
+  const sweeper = startSweeper(); // seasons, march resolution, wild mines
 
   server.listen(config.port, () => {
-    logger.info(`Bingo backend listening on :${config.port} (${config.env})`);
+    logger.info(`Ironhold backend listening on :${config.port} (${config.env})`);
     logger.info(`Allowed client origins: ${config.clientOrigins.join(', ')}`);
   });
 
   const shutdown = (signal) => {
     logger.info(`Received ${signal}, shutting down...`);
     sockets.stop();
+    sweeper.stop();
     server.close(() => {
       logger.info('HTTP server closed');
       process.exit(0);

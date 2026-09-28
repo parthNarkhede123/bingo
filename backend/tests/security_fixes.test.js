@@ -70,33 +70,3 @@ test('login anti-enumeration dummy hash is a VALID bcrypt hash (does real work)'
   // The previously-shipped malformed hash was 59 chars — guard against regression.
   assert.notStrictEqual('$2a$12$0000000000000000000000000000000000000000000000000000'.length, 60);
 });
-
-test('matchmaker rejects joins past the queue cap', () => {
-  loadFreshConfig({ NODE_ENV: 'test', JWT_SECRET: 'c'.repeat(40), MAX_QUEUE_SIZE: '2' });
-  for (const k of Object.keys(require.cache)) {
-    if (k.includes(path.join('src', 'sockets', 'matchmaker'))) delete require.cache[k];
-  }
-  const { Matchmaker } = require('../src/sockets/matchmaker');
-  const mm = new Matchmaker();
-  const now = 1000;
-  // Ratings far apart so nobody matches and they all sit in the queue.
-  assert.strictEqual(mm.addAndMatch({ userId: 'u1', rating: 100, joinedAt: now }, now), null);
-  assert.strictEqual(mm.addAndMatch({ userId: 'u2', rating: 5000, joinedAt: now }, now), null);
-  const full = mm.addAndMatch({ userId: 'u3', rating: 9000, joinedAt: now }, now);
-  assert.deepStrictEqual(full, { full: true });
-  assert.strictEqual(mm.size(), 2);
-});
-
-test('matchmaker evicts entries that waited past the max', () => {
-  loadFreshConfig({ NODE_ENV: 'test', JWT_SECRET: 'c'.repeat(40), MAX_QUEUE_WAIT_MS: '1000' });
-  for (const k of Object.keys(require.cache)) {
-    if (k.includes(path.join('src', 'sockets', 'matchmaker'))) delete require.cache[k];
-  }
-  const { Matchmaker } = require('../src/sockets/matchmaker');
-  const mm = new Matchmaker();
-  mm.addAndMatch({ userId: 'old', rating: 1000, joinedAt: 0 }, 0);
-  const evicted = mm.evictStale(2000); // 2000ms > 1000ms max wait
-  assert.strictEqual(evicted.length, 1);
-  assert.strictEqual(evicted[0].userId, 'old');
-  assert.strictEqual(mm.size(), 0);
-});

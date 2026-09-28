@@ -59,24 +59,24 @@ function escapeHtml(s) {
 async function sendPasswordResetEmail({ to, username, resetUrl }) {
   const safeName = escapeHtml(username || 'there');
   const safeUrl = encodeURI(resetUrl);
-  const subject = 'Reset your Bingo Arena password';
+  const subject = 'Reset your Ironhold password';
   const text = [
     `Hi ${username || 'there'},`,
     '',
-    'We received a request to reset your Bingo Arena password.',
+    'We received a request to reset your Ironhold password.',
     'Open the link below to choose a new one. It expires in 1 hour and can be used once:',
     '',
     resetUrl,
     '',
     "If you didn't request this, you can safely ignore this email — your password will not change.",
     '',
-    '— Bingo Arena',
+    '— Ironhold',
   ].join('\n');
   const html = `
     <div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:auto;color:#111">
       <h2 style="margin:0 0 12px">Reset your password</h2>
       <p>Hi ${safeName},</p>
-      <p>We received a request to reset your <strong>Bingo Arena</strong> password.
+      <p>We received a request to reset your <strong>Ironhold</strong> password.
          This link expires in 1 hour and can be used once.</p>
       <p style="margin:24px 0">
         <a href="${safeUrl}" style="background:#5b6cff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block">Choose a new password</a>

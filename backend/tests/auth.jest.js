@@ -17,7 +17,7 @@ describe('auth', () => {
     expect(res.status).toBe(201);
     expect(res.body.token).toBeTruthy();
     expect(res.body.user.username).toBe('alice');
-    expect(res.body.user.rating).toBe(1000);
+    expect(res.body.user.stats).toBeTruthy();
     expect(res.body.user.passwordHash).toBeUndefined();
   });
 

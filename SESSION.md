@@ -1,3 +1,33 @@
+# Ironhold — Build Session Log
+
+> **Pivot (2026-09-28):** This project began as **Bingo Arena**, a real-time 1v1
+> multiplayer Bingo game. It was later pivoted into **Ironhold — The Siege Week**,
+> a light week-long browser strategy/trade game, reusing the same hardened
+> platform (auth, security, CI/CD, Render + Atlas deploy). The Bingo game layer
+> was removed; the sections below the divider are the original Bingo build log,
+> kept as history. The live deploy still uses the `bingo-arena` service names
+> (and `bingo-arena.onrender.com`) so the running deployment and its configured
+> secrets were preserved across the pivot.
+
+## Ironhold at a glance
+
+- **One week-long season.** Win by topping the **Conquest Points** ladder.
+- **Server-authoritative Hold** (one doc/player/season). State is resolved
+  lazily from timestamps on read; a sweeper advances marches, wild mines, and
+  season rollover. The map is procedural (biome derived from coordinates), so
+  it costs no storage.
+- **Forced interdependence:** each biome yields exactly one of ten materials;
+  crafting, upgrading and winning need foreign materials, so players must trade
+  (escrow-based offers) or raid for them.
+- **Systems:** 4 stances × 3-slot gear loadouts, chests → gear → salvage/forge,
+  XP → levels → skill points, two gem-recruited commanders (Durgan auto-loadout,
+  Wren scouting) with 12h season-start trials, quests, ad-reward gems, and light
+  non-aggression pacts that block attacks both ways.
+- **Frontend screens:** Keep, Map (raid/scout/mine), Barracks (gear/skills/forge),
+  Bazaar (trade offers + pacts), War Room (commanders/quests/ads), Reports.
+
+---
+
 # Bingo Arena — Build Session Log
 
 A record of how this application was designed, built, tested, and hardened, so a
