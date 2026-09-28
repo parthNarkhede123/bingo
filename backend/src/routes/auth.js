@@ -143,22 +143,38 @@ router.post(
       const idLower = req.body.identifier.toLowerCase();
       const user = await User.findOne({ $or: [{ usernameLower: idLower }, { email: idLower }] })
         .select('+resetTokenHash +resetTokenExpires');
-      if (!user) return res.json(GENERIC);
 
-      // Random single-use token; only its hash is persisted (like a password).
-      const rawToken = crypto.randomBytes(32).toString('hex');
-      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-      user.resetTokenHash = tokenHash;
-      user.resetTokenExpires = new Date(Date.now() + config.passwordReset.ttlMs);
-      await user.save();
+      // All account-exists work runs AFTER the response so the found and
+      // not-found branches have identical response-path timing (no awaited DB
+      // write on only one branch). This mirrors /login's DUMMY_HASH timing
+      // equalization and closes the timing side channel that would otherwise
+      // let an attacker enumerate accounts despite the uniform body below.
+      const work = (async () => {
+        if (!user) return;
 
-      const resetUrl = `${config.appUrl}/reset-password?token=${rawToken}`;
-      // Email send is fire-and-forget in prod so response timing doesn't reveal
-      // whether the account exists; failures are logged, never surfaced. In
-      // tests we await it so the captured outbox is ready when the call returns.
-      const mailP = sendPasswordResetEmail({ to: user.email, username: user.username, resetUrl })
-        .catch((err) => logger.error('Password reset email failed:', err.message));
-      if (config.env === 'test') await mailP;
+        // Per-account resend cooldown: if a reset was issued within the cooldown
+        // window, don't mint/send another. Blunts victim inbox-bombing (usernames
+        // are public via the leaderboard). The response stays uniform either way,
+        // so this adds no enumeration oracle.
+        if (user.resetTokenExpires) {
+          const issuedAt = user.resetTokenExpires.getTime() - config.passwordReset.ttlMs;
+          if (Date.now() - issuedAt < config.passwordReset.resendCooldownMs) return;
+        }
+
+        // Random single-use token; only its hash is persisted (like a password).
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        user.resetTokenHash = tokenHash;
+        user.resetTokenExpires = new Date(Date.now() + config.passwordReset.ttlMs);
+        await user.save();
+
+        const resetUrl = `${config.appUrl}/reset-password?token=${rawToken}`;
+        await sendPasswordResetEmail({ to: user.email, username: user.username, resetUrl });
+      })().catch((err) => logger.error('Password reset processing failed:', err.message));
+
+      // In tests, await the background work so the captured outbox is ready
+      // when the call returns.
+      if (config.env === 'test') await work;
 
       return res.json(GENERIC);
     } catch (err) {

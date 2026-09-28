@@ -105,6 +105,22 @@ describe('password reset', () => {
     expect(ok.status).toBe(200);
   });
 
+  test('forgot-password enforces a per-account resend cooldown (anti inbox-bombing)', async () => {
+    await register('sasha', 'sasha@example.com', 'origPassword1');
+    clearOutbox();
+
+    const first = await agent().post('/api/auth/forgot-password').send({ identifier: 'sasha' });
+    expect(first.status).toBe(200);
+    expect(outbox).toHaveLength(1); // first request sends one email
+
+    // A second request within the cooldown window is suppressed (no new email),
+    // but still returns the identical uniform response (no enumeration oracle).
+    const second = await agent().post('/api/auth/forgot-password').send({ identifier: 'sasha' });
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual(first.body);
+    expect(outbox).toHaveLength(1); // unchanged: cooldown suppressed the resend
+  });
+
   test('forgot-password requires an identifier', async () => {
     const res = await agent().post('/api/auth/forgot-password').send({});
     expect(res.status).toBe(400);

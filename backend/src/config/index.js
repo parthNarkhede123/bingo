@@ -62,6 +62,10 @@ const config = {
   passwordReset: {
     // How long a reset link is valid, in ms (default 1 hour). Single-use.
     ttlMs: intEnv('RESET_TTL_MS', 60 * 60 * 1000),
+    // Per-account resend cooldown (default 5 min): suppress a fresh reset email
+    // if one was issued within this window. Blunts victim inbox-bombing
+    // (usernames are public) without adding an enumeration oracle.
+    resendCooldownMs: intEnv('RESET_RESEND_COOLDOWN_MS', 5 * 60 * 1000),
   },
 
   game: {
