@@ -1,0 +1,13 @@
+{
+  "name": "pg-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PG Manager — a system to help manage PG (paying-guest) accommodations. Fresh start.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

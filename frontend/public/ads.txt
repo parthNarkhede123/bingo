@@ -1,6 +1,0 @@
-# Google AdSense ads.txt
-# After AdSense approves your account, replace the publisher id below with your
-# real one (format: pub-XXXXXXXXXXXXXXXX) and REMOVE the leading "# " so the
-# line becomes active. Until then this file intentionally declares no sellers.
-#
-# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

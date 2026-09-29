@@ -1,104 +1,27 @@
-# Render Blueprint — provisions the whole Ironhold app from this repo.
-# In the Render dashboard: New + > Blueprint > connect this repo. Render reads
-# this file, creates both services, and redeploys automatically on every push
-# to the default branch (autoDeployTrigger: commit).
+# Render Blueprint for PG Manager.
 #
-# Public URLs are derived from the service names below:
-#   Frontend : https://bingo-arena.onrender.com
-#   Backend  : https://bingo-arena-api.onrender.com
-# If either name is already taken globally, Render appends a suffix. If that
-# happens, update CLIENT_ORIGIN (backend) and VITE_API_URL (frontend) to the
-# real URLs shown in the dashboard, then redeploy. That is the only manual fix.
+# In the Render dashboard: New + > Blueprint > connect this repo. Because the
+# service name below is NEW, Render provisions a FRESH service — the old
+# bingo-arena / bingo-arena-api services are untouched and keep running until
+# you delete them in the dashboard. You will need to (re)enter any secrets for
+# this new service there.
+#
+# Public URL is derived from the service name (Render appends a suffix if the
+# name is already taken globally):
+#   https://pg-manager.onrender.com
 
 services:
-  # ---------- Backend: Express + Socket.IO API ----------
   - type: web
     runtime: node
-    name: bingo-arena-api
-    rootDir: backend
+    name: pg-manager
     plan: free
     region: oregon
-    buildCommand: npm ci
+    buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /api/health
+    healthCheckPath: /
     autoDeployTrigger: commit
     envVars:
       - key: NODE_VERSION
         value: "22"
       - key: NODE_ENV
         value: production
-      - key: JWT_SECRET
-        generateValue: true          # Render generates a strong secret
-      - key: JWT_EXPIRES_IN
-        value: 2d
-      - key: TRUST_PROXY
-        value: "1"                   # Render terminates TLS at its proxy
-      - key: MONGO_URI
-        sync: false                  # paste your Atlas connection string once
-      - key: CLIENT_ORIGIN
-        value: https://bingo-arena.onrender.com
-      # ---- Email (password reset) ----
-      # Leave the SMTP_* keys blank to deploy WITHOUT email: reset requests
-      # still succeed uniformly but nothing is delivered. Fill them in the
-      # dashboard to enable real reset emails (any SMTP provider works — a
-      # Gmail App Password, Brevo, Mailgun, SendGrid, ...).
-      - key: APP_URL
-        value: https://bingo-arena.onrender.com   # frontend base for reset links
-      - key: SMTP_HOST
-        sync: false
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_SECURE
-        value: "0"                 # set to "1" only for SMTP port 465
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
-        sync: false
-      - key: MAIL_FROM
-        sync: false                # e.g. "Ironhold <ironhold.game.support@gmail.com>"
-
-  # ---------- Frontend: React + Vite static site ----------
-  - type: web
-    runtime: static
-    name: bingo-arena
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
-    autoDeployTrigger: commit
-    # SPA fallback so client-side routes (/keep, /map, /privacy, ...) resolve.
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    # Light security headers for the static assets.
-    headers:
-      - path: /*
-        name: X-Frame-Options
-        value: SAMEORIGIN
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
-    envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: VITE_API_URL
-        value: https://bingo-arena-api.onrender.com
-      # Fill these in the dashboard once AdSense approves your site, then
-      # redeploy. Left blank, the app shows non-intrusive placeholder ad slots.
-      - key: VITE_ADSENSE_CLIENT
-        sync: false
-      # Default ad slot. The per-placement slots below are OPTIONAL — each falls
-      # back to this one when left blank, so a single slot fills the whole site.
-      - key: VITE_ADSENSE_SLOT
-        sync: false
-      - key: VITE_ADSENSE_SLOT_HOME
-        sync: false
-      - key: VITE_ADSENSE_SLOT_PLAY
-        sync: false
-      - key: VITE_ADSENSE_SLOT_LEADERBOARD
-        sync: false
-      - key: VITE_ADSENSE_SLOT_PROFILE
-        sync: false
